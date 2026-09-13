@@ -17,20 +17,12 @@ import org.bukkit.command.*;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.entity.PlayerDeathEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerItemDamageEvent;
-import org.bukkit.event.player.PlayerItemBreakEvent;
 import org.bukkit.event.player.PlayerChangedWorldEvent;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -153,7 +145,7 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
     private String pretty(String raw){ String s=raw.replace('_',' '); return Character.toUpperCase(s.charAt(0))+s.substring(1); }
 
     private List<String> keys(String cat){ return switch(cat){
-        case "gameplay" -> List.of("gameplay_auto_sprint","gameplay_keep_inventory","gameplay_keep_experience","gameplay_no_fall_damage","gameplay_no_fire_damage","gameplay_no_drowning","gameplay_no_void_damage","gameplay_no_freeze_damage","gameplay_no_explosion_damage","gameplay_no_projectile_damage","gameplay_no_magic_damage","gameplay_no_contact_damage","gameplay_no_lava_damage","gameplay_safe_respawn","gameplay_damage_alerts");
+        case "gameplay" -> List.of("gameplay_actionbar_clock","gameplay_actionbar_coordinates","gameplay_actionbar_ping","gameplay_actionbar_fps_hint","gameplay_welcome_hint","gameplay_afk_hint","gameplay_chat_notifications","gameplay_sound_notifications","gameplay_item_notifications","gameplay_block_notifications","gameplay_world_notifications","gameplay_server_tips","gameplay_compass_hint","gameplay_direction_hint","gameplay_session_status");
         case "combat" -> List.of("combat_combat_alerts","combat_attack_sounds","combat_hit_particles","combat_crit_particles","combat_damage_numbers","combat_low_health_warning","combat_target_highlight","combat_auto_aim_hint","combat_shield_reminder","combat_totem_reminder","combat_weapon_durability_alert","combat_armor_durability_alert","combat_potion_alerts","combat_combat_timer","combat_combat_sounds");
         case "movement" -> List.of("movement_auto_sprint","movement_sprint_toggle","movement_jump_feedback","movement_step_feedback","movement_fall_feedback","movement_velocity_feedback","movement_speed_effect","movement_jump_effect","movement_slow_fall_effect","movement_dolphins_grace","movement_water_breathing","movement_climb_feedback","movement_elytra_alert","movement_horse_speed_alert","movement_boat_speed_alert");
         case "visual" -> List.of("visual_night_vision","visual_bright_effects","visual_potion_effect_alerts","visual_weather_alerts","visual_time_alerts","visual_fire_alerts","visual_portal_alerts","visual_darkness_alerts","visual_sculk_alerts","visual_light_level_alerts","visual_entity_alerts","visual_rare_entity_alerts","visual_item_glow","visual_named_item_glow","visual_bossbar_alerts","visual_silent_spawn");
@@ -164,68 +156,27 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
         default -> null; }; }
 
     private boolean any(Player p,String suffix){ for(String cat:categoryKeys()) if(enabled(p,cat+"_"+suffix)) return true; return false; }
-    private void applyEffects(Player p){
-        effect(p,PotionEffectType.NIGHT_VISION,"visual_night_vision");
-        effect(p,PotionEffectType.SPEED,"movement_speed_effect");
-        effect(p,PotionEffectType.JUMP_BOOST,"movement_jump_effect");
-        effect(p,PotionEffectType.SLOW_FALLING,"movement_slow_fall_effect");
-        effect(p,PotionEffectType.WATER_BREATHING,"movement_water_breathing");
-        effect(p,PotionEffectType.DOLPHINS_GRACE,"movement_dolphins_grace");
-    }
-    private void effect(Player p,PotionEffectType type,String key){
-        if(enabled(p,key)) p.addPotionEffect(new PotionEffect(type,220,0,true,false,false));
-        else p.removePotionEffect(type);
-    }
 
     private void startStatusTask(){
         Bukkit.getScheduler().runTaskTimer(this,()->{
             for(Player p:Bukkit.getOnlinePlayers()){
-                applyEffects(p);
                 String msg=null;
-                if(enabled(p,"utility_coordinates")) msg="XYZ "+p.getLocation().getBlockX()+" "+p.getLocation().getBlockY()+" "+p.getLocation().getBlockZ();
-                else if(enabled(p,"utility_ping_display")) msg="Ping: "+p.getPing()+"ms";
+                if(enabled(p,"utility_coordinates") || enabled(p,"gameplay_actionbar_coordinates")) msg="XYZ "+p.getLocation().getBlockX()+" "+p.getLocation().getBlockY()+" "+p.getLocation().getBlockZ();
+                else if(enabled(p,"utility_ping_display") || enabled(p,"gameplay_actionbar_ping")) msg="Ping: "+p.getPing()+"ms";
                 else if(enabled(p,"utility_online_count")) msg="Online: "+Bukkit.getOnlinePlayers().size();
-                else if(enabled(p,"utility_clock_display")) msg="Time: "+p.getWorld().getTime();
+                else if(enabled(p,"utility_clock_display") || enabled(p,"gameplay_actionbar_clock")) msg="Time: "+p.getWorld().getTime();
                 else if(enabled(p,"utility_memory_display")) msg="Memory: "+((Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory())/1024/1024)+" MB";
-                else if(enabled(p,"visual_time_alerts")) msg="World time: "+p.getWorld().getTime();
-                else if(enabled(p,"visual_weather_alerts")) msg=p.getWorld().hasStorm()?"Weather: rain":"Weather: clear";
+                else if(enabled(p,"visual_time_alerts") || enabled(p,"world_time_alerts")) msg="World time: "+p.getWorld().getTime();
+                else if(enabled(p,"visual_weather_alerts") || enabled(p,"world_weather_alerts")) msg=p.getWorld().hasStorm()?"Weather: rain":"Weather: clear";
                 else if(enabled(p,"visual_light_level_alerts")) msg="Light level: "+p.getLocation().getBlock().getLightLevel();
-                else if(enabled(p,"combat_low_health_warning") && p.getHealth()<=p.getMaxHealth()*0.30) msg="LOW HEALTH: "+Math.ceil(p.getHealth());
-                else if(enabled(p,"utility_actionbar_status")) msg="Better Settings active";
+                else if(enabled(p,"utility_actionbar_status") || enabled(p,"gameplay_session_status")) msg="Better Settings";
                 if(msg!=null) p.sendActionBar(Component.text(msg,NamedTextColor.GRAY));
             }
         },20L,20L);
     }
 
-    @EventHandler public void onJoin(PlayerJoinEvent e){ Player p=e.getPlayer(); applyEffects(p); if(!enabled(p,"chat_join_messages") || enabled(p,"visual_silent_spawn")) e.setJoinMessage(null); if(getConfig().getBoolean("open-message",false)) p.sendMessage(Component.text("Use /bettersettings to open your personal settings.",NamedTextColor.GRAY)); }
+    @EventHandler public void onJoin(PlayerJoinEvent e){ Player p=e.getPlayer(); if(!enabled(p,"chat_join_messages") || enabled(p,"visual_silent_spawn")) e.setJoinMessage(null); if(getConfig().getBoolean("open-message",false)) p.sendMessage(Component.text("Use /bettersettings to open your personal settings.",NamedTextColor.GRAY)); }
     @EventHandler public void onQuit(PlayerQuitEvent e){ if(!enabled(e.getPlayer(),"chat_quit_messages")) e.setQuitMessage(null); saveAll(); }
-    @EventHandler public void onMove(PlayerMoveEvent e){
-        Player p=e.getPlayer(); if(enabled(p,"gameplay_auto_sprint")||enabled(p,"movement_auto_sprint")){ if(p.isSprinting()==false && p.getVelocity().lengthSquared()>0.02 && p.getFoodLevel()>0) p.setSprinting(true); }
-        if(enabled(p,"movement_speed_effect")||enabled(p,"movement_jump_effect")||enabled(p,"movement_slow_fall_effect")) applyEffects(p);
-    }
-    @EventHandler public void onDamage(EntityDamageEvent e){
-        if(!(e.getEntity() instanceof Player p)) return;
-        if(enabled(p,"gameplay_no_fall_damage") && e.getCause()==EntityDamageEvent.DamageCause.FALL) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_fire_damage") && (e.getCause()==EntityDamageEvent.DamageCause.FIRE || e.getCause()==EntityDamageEvent.DamageCause.FIRE_TICK || e.getCause()==EntityDamageEvent.DamageCause.HOT_FLOOR)) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_drowning") && e.getCause()==EntityDamageEvent.DamageCause.DROWNING) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_void_damage") && e.getCause()==EntityDamageEvent.DamageCause.VOID) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_freeze_damage") && e.getCause()==EntityDamageEvent.DamageCause.FREEZE) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_explosion_damage") && (e.getCause()==EntityDamageEvent.DamageCause.ENTITY_EXPLOSION || e.getCause()==EntityDamageEvent.DamageCause.BLOCK_EXPLOSION)) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_projectile_damage") && e.getCause()==EntityDamageEvent.DamageCause.PROJECTILE) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_magic_damage") && (e.getCause()==EntityDamageEvent.DamageCause.MAGIC || e.getCause()==EntityDamageEvent.DamageCause.DRAGON_BREATH)) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_contact_damage") && e.getCause()==EntityDamageEvent.DamageCause.CONTACT) e.setCancelled(true);
-        if(enabled(p,"gameplay_no_lava_damage") && e.getCause()==EntityDamageEvent.DamageCause.LAVA) e.setCancelled(true);
-    }
-    @EventHandler public void onDeath(PlayerDeathEvent e){
-        Player p=e.getEntity(); if(enabled(p,"gameplay_keep_inventory")){ e.setKeepInventory(true); e.getDrops().clear(); }
-        if(enabled(p,"gameplay_keep_experience")){ e.setKeepLevel(true); e.setDroppedExp(0); }
-    }
-    @EventHandler public void onCombat(EntityDamageByEntityEvent e){
-        if(!(e.getDamager() instanceof Player p)) return;
-        if(enabled(p,"combat_attack_sounds")||enabled(p,"combat_combat_sounds")) p.playSound(p.getLocation(),Sound.ENTITY_PLAYER_ATTACK_STRONG,0.7f,1.0f);
-        if(enabled(p,"combat_hit_particles")||enabled(p,"combat_crit_particles")) p.getWorld().spawnParticle(enabled(p,"combat_crit_particles")?Particle.CRIT:Particle.DAMAGE_INDICATOR,e.getEntity().getLocation().add(0,1,0),enabled(p,"combat_crit_particles")?8:4,0.25,0.35,0.25,0.02);
-        if(enabled(p,"combat_damage_numbers")) p.sendActionBar(Component.text("Damage: "+String.format(Locale.ROOT,"%.1f",e.getFinalDamage()),NamedTextColor.RED));
-    }
 
     @EventHandler public void onPickup(EntityPickupItemEvent e){
         if(!(e.getEntity() instanceof Player p)) return;
@@ -238,19 +189,7 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
         if(enabled(p,"items_block_alert")) p.sendActionBar(Component.text("Block: "+e.getBlock().getType().key().value(),NamedTextColor.GRAY));
         if(enabled(p,"world_biome_alerts")) p.sendActionBar(Component.text("Biome: "+p.getLocation().getBlock().getBiome().key().value(),NamedTextColor.GRAY));
     }
-
-    @EventHandler public void onItemDamage(PlayerItemDamageEvent e){
-        Player p=e.getPlayer(); ItemStack item=e.getItem(); int max=item.getType().getMaxDurability();
-        if(max>0 && (enabled(p,"items_item_low_durability")||enabled(p,"combat_weapon_durability_alert")||enabled(p,"combat_armor_durability_alert"))){
-            int left=max-item.getDamage(); if(left<=Math.max(1,max/10)) p.sendActionBar(Component.text("Low durability: "+item.getType().key().value()+" ("+left+")",NamedTextColor.RED));
-        }
     }
-
-    @EventHandler public void onItemBreak(PlayerItemBreakEvent e){
-        Player p=e.getPlayer(); if(enabled(p,"items_item_break_alert")||enabled(p,"items_tool_break_alert")||enabled(p,"items_armor_break_alert")){
-            p.sendActionBar(Component.text("Item broke: "+e.getBrokenItem().getType().key().value(),NamedTextColor.RED));
-            p.playSound(p.getLocation(),Sound.ENTITY_ITEM_BREAK,1f,1f);
-        }
     }
 
     @EventHandler public void onWorld(PlayerChangedWorldEvent e){
