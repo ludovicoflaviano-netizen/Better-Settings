@@ -1,0 +1,4 @@
+# Better Settings server configuration
+# Player preferences are stored separately in player-settings.yml.
+open-message: false
+apply-message: true

@@ -1,0 +1,17 @@
+name: BetterSettings
+version: 1.0.0
+main: com.bettersettings.BetterSettingsPlugin
+api-version: '1.21'
+author: Better Settings
+website: https://github.com/ludovicoflaviano-netizen/Better-Settings
+description: Personal player settings with a native Paper dialog UI and 120 toggleable settings.
+commands:
+  bettersettings:
+    description: Open your personal Better Settings screen.
+    aliases: [settings, bsettings]
+    usage: /bettersettings [category]
+    permission: bettersettings.use
+permissions:
+  bettersettings.use:
+    description: Allows a player to use Better Settings.
+    default: true
