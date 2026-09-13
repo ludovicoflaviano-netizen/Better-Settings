@@ -3,6 +3,7 @@ package com.bettersettings;
 import io.papermc.paper.dialog.Dialog;
 import io.papermc.paper.registry.data.dialog.*;
 import io.papermc.paper.registry.data.dialog.body.DialogBody;
+import io.papermc.paper.registry.data.dialog.action.DialogAction;
 import io.papermc.paper.registry.data.dialog.input.DialogInput;
 import io.papermc.paper.registry.data.dialog.type.DialogType;
 import net.kyori.adventure.text.Component;
