@@ -61,18 +61,19 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (!(sender instanceof Player p)) { sender.sendMessage("Players only."); return true; }
         if (!p.hasPermission("bettersettings.use")) return true;
-        if (args.length==0) { p.showDialog(mainDialog()); return true; }
+        if (args.length==0 || args[0].equalsIgnoreCase("open")) { p.showDialog(mainDialog()); return true; }
         if (args.length==1) {
             if (args[0].equalsIgnoreCase("reload")) { if(!p.hasPermission("bettersettings.admin")){p.sendMessage(Component.text("No permission.",NamedTextColor.RED));return true;} reloadConfig(); return true; }
             if (categoryKeys().contains(args[0].toLowerCase())) { p.showDialog(categoryDialog(p,args[0].toLowerCase())); return true; }
         }
-        if (args.length>=17 && args[0].equalsIgnoreCase("apply")) { applyCategory(p,args); return true; }
+        if (args.length>=2 && args[0].equalsIgnoreCase("apply")) { applyCategory(p,args); return true; }
         p.sendMessage(Component.text("Usage: /bettersettings [category]",NamedTextColor.GRAY)); return true;
     }
 
     private Set<String> categoryKeys(){ return Set.of("gameplay","combat","movement","visual","chat","items","world","utility"); }
     private void applyCategory(Player p,String[] args){
-        String cat=args[1]; List<String> keys=keys(cat); if(keys==null || args.length<keys.size()+2) return;
+        String cat=args[1].toLowerCase(Locale.ROOT); List<String> keys=keys(cat);
+        if(keys==null || args.length != keys.size()+2) { p.sendMessage(Component.text("Invalid settings payload. Open the menu again with /bettersettings.",NamedTextColor.RED)); return; }
         for(int i=0;i<keys.size();i++) set(p,keys.get(i),Boolean.parseBoolean(args[i+2]));
         saveAll(); applyEffects(p); if(getConfig().getBoolean("apply-message",true)) p.sendActionBar(Component.text("Settings saved",NamedTextColor.GREEN));
     }
@@ -83,7 +84,7 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
         for(String cat:categoryKeys()) buttons.add(button(iconButton(cat,icons.get(cat))));
         return Dialog.create(builder -> builder.empty()
             .base(DialogBase.builder(Component.text("Better Settings",NamedTextColor.WHITE))
-                .body(List.of(DialogBody.plainMessage(Component.text("Personal settings • 120 options",NamedTextColor.GRAY))))
+                .body(List.of(DialogBody.plainMessage(Component.text("Personal settings • 121 options",NamedTextColor.GRAY))))
                 .canCloseWithEscape(true).build())
             .type(DialogType.multiAction(buttons,null,2)));
     }
@@ -118,7 +119,7 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
         case "gameplay" -> List.of("gameplay_auto_sprint","gameplay_keep_inventory","gameplay_keep_experience","gameplay_no_fall_damage","gameplay_no_fire_damage","gameplay_no_drowning","gameplay_no_void_damage","gameplay_no_freeze_damage","gameplay_no_explosion_damage","gameplay_no_projectile_damage","gameplay_no_magic_damage","gameplay_no_contact_damage","gameplay_no_lava_damage","gameplay_safe_respawn","gameplay_damage_alerts");
         case "combat" -> List.of("combat_combat_alerts","combat_attack_sounds","combat_hit_particles","combat_crit_particles","combat_damage_numbers","combat_low_health_warning","combat_target_highlight","combat_auto_aim_hint","combat_shield_reminder","combat_totem_reminder","combat_weapon_durability_alert","combat_armor_durability_alert","combat_potion_alerts","combat_combat_timer","combat_combat_sounds");
         case "movement" -> List.of("movement_auto_sprint","movement_sprint_toggle","movement_jump_feedback","movement_step_feedback","movement_fall_feedback","movement_velocity_feedback","movement_speed_effect","movement_jump_effect","movement_slow_fall_effect","movement_dolphins_grace","movement_water_breathing","movement_climb_feedback","movement_elytra_alert","movement_horse_speed_alert","movement_boat_speed_alert");
-        case "visual" -> List.of("visual_night_vision","visual_bright_effects","visual_potion_effect_alerts","visual_weather_alerts","visual_time_alerts","visual_fire_alerts","visual_portal_alerts","visual_darkness_alerts","visual_sculk_alerts","visual_light_level_alerts","visual_entity_alerts","visual_rare_entity_alerts","visual_item_glow","visual_named_item_glow","visual_bossbar_alerts");
+        case "visual" -> List.of("visual_night_vision","visual_bright_effects","visual_potion_effect_alerts","visual_weather_alerts","visual_time_alerts","visual_fire_alerts","visual_portal_alerts","visual_darkness_alerts","visual_sculk_alerts","visual_light_level_alerts","visual_entity_alerts","visual_rare_entity_alerts","visual_item_glow","visual_named_item_glow","visual_bossbar_alerts","visual_silent_spawn");
         case "chat" -> List.of("chat_join_messages","chat_quit_messages","chat_death_messages","chat_advancement_messages","chat_chat_timestamps","chat_chat_sound","chat_mention_sound","chat_mention_highlight","chat_private_message_sound","chat_command_feedback","chat_system_message_sound","chat_chat_filter_notice","chat_spam_notice","chat_chat_scroll_alert","chat_welcome_message");
         case "items" -> List.of("items_item_pickup_sound","items_item_drop_sound","items_item_break_alert","items_item_low_durability","items_tool_break_alert","items_armor_break_alert","items_food_alert","items_potion_alert","items_arrow_alert","items_block_alert","items_container_alert","items_inventory_full_alert","items_xp_pickup_sound","items_rare_item_alert","items_enchanted_item_alert");
         case "world" -> List.of("world_biome_alerts","world_structure_alerts","world_chunk_alerts","world_portal_alerts","world_weather_alerts","world_thunder_alerts","world_time_alerts","world_moon_phase_alerts","world_sleep_alerts","world_bed_alerts","world_spawn_alerts","world_village_alerts","world_raid_alerts","world_trial_alerts","world_end_alerts");
@@ -135,8 +136,8 @@ public final class BetterSettingsPlugin extends JavaPlugin implements Listener, 
         if(enabled(p,"movement_dolphins_grace")) p.addPotionEffect(new PotionEffect(PotionEffectType.DOLPHINS_GRACE,220,0,true,false,false)); else p.removePotionEffect(PotionEffectType.DOLPHINS_GRACE);
     }
 
-    @EventHandler public void onJoin(PlayerJoinEvent e){ applyEffects(e.getPlayer()); if(getConfig().getBoolean("open-message",false)) e.getPlayer().sendMessage(Component.text("Use /bettersettings to open your personal settings.",NamedTextColor.GRAY)); }
-    @EventHandler public void onQuit(PlayerQuitEvent e){ saveAll(); }
+    @EventHandler public void onJoin(PlayerJoinEvent e){ Player p=e.getPlayer(); applyEffects(p); if(!enabled(p,"chat_join_messages") || enabled(p,"visual_silent_spawn")) e.setJoinMessage(null); if(getConfig().getBoolean("open-message",false)) p.sendMessage(Component.text("Use /bettersettings to open your personal settings.",NamedTextColor.GRAY)); }
+    @EventHandler public void onQuit(PlayerQuitEvent e){ if(!enabled(e.getPlayer(),"chat_quit_messages")) e.setQuitMessage(null); saveAll(); }
     @EventHandler public void onMove(PlayerMoveEvent e){
         Player p=e.getPlayer(); if(enabled(p,"gameplay_auto_sprint")||enabled(p,"movement_auto_sprint")){ if(p.isSprinting()==false && p.getVelocity().lengthSquared()>0.02 && p.getFoodLevel()>0) p.setSprinting(true); }
         if(enabled(p,"movement_speed_effect")||enabled(p,"movement_jump_effect")||enabled(p,"movement_slow_fall_effect")) applyEffects(p);

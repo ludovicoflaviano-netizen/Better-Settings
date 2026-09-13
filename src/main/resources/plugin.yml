@@ -8,7 +8,7 @@ description: Personal player settings with a native Paper dialog UI and 120 togg
 commands:
   bettersettings:
     description: Open your personal Better Settings screen.
-    aliases: [settings, bsettings]
+    aliases: [settings, bsettings, bs]
     usage: /bettersettings [category]
     permission: bettersettings.use
 permissions:
